@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<body>
+    <canvas></canvas>
+</body>
+
+<script>
+    const canvas = document.querySelector("canvas");
+    const ctx = canvas.getContext("2d");
+    var speed = 500;
+    var FPS = 60;
+    var framesLimit = FPS*speed / 1000;
+
+    canvas.width = 600;
+    canvas.height = 600;
+
+    class HypnoEye {
+        constructor(ctx, x=0, y=0,scale=0.5) {
+            this.c = ctx;
+            this.x = x;
+            this.y = y;
+            this.scale = scale;
+
+            this.diffOuter = [];
+            this.diffInner = [];
+
+            this.speed = 500;
+            this.FPS = 60;
+            this.framesLimit = this.FPS*this.speed / 1000;
+            this.animationDirection = 1;
+            this.frameCount = 0;
+
+            this.init();
+        }
+
+        init() {
+            const _basePts = {
+                minusOuter: [[129,62,124,60,88,62],[59,67,11,68,3,112],[1,159,65,155,110,175],[142,188,146,190,195,189],[229,186,237,172,267,165],[305,155,353,166,361,121],[361,76,310,80,243,57],[209,45,187,51,153,58]],
+                plusOuter: [[165,0,165,40,120,60],[90,75,25,60,20,115],[20,155,65,155,110,175],[150,190,130,230,195,235],[235,235,240,195,270,180],[305,155,350,165,350,115],[350,75,310,80,260,55],[225,35,240,10,200,5]],
+                minusInner: [[134,78,117,70,87,71],[62,71,29,83,22,111],[22,157,65,155,112,162],[149,167,156,176,196,178],[219,178,231,171,267,155],[309,137,363,153,349,112],[332,77,280,102,236,79],[198,60,187,51,155,71]],
+                plusInner: [[168,15,167,73,127,76],[90,75,49,67,43,118],[45,157,78,145,118,156],[156,172,131,206,196,220],[227,220,221,172,260,166],[285,159,319,165,331,121],[336,76,310,80,252,60],[216,47,231,12,202,13]]
+            };
+
+            for (let key in _basePts) {
+                this[key] = structuredClone(_basePts[key]).map((curvePoint, i) => {
+                    var diffRow = [];
+                    let newCurvePoint = curvePoint.map((param, j)=>{
+                        let newParam = param * this.scale;
+
+                        if (key == "plusOuter") diffRow.push((this.minusOuter[i][j] - newParam) / this.framesLimit);
+                        if (key == "plusInner") diffRow.push((this.minusInner[i][j] - newParam) / this.framesLimit);
+
+                        return newParam;
+                    })
+
+                    if (key == "plusOuter") this.diffOuter.push(diffRow);
+                    if (key == "plusInner") this.diffInner.push(diffRow);
+
+                    return newCurvePoint;
+                })
+            }
+
+            this.activeOuter = structuredClone(this.plusOuter);
+            this.activeInner = structuredClone(this.plusInner);
+        }
+
+        draw() {
+            this.c.beginPath();
+                this.c.moveTo(this.activeOuter[7][4], this.activeOuter[7][5]);
+                for (let pt of this.activeOuter) {
+                    this.c.bezierCurveTo(...pt);
+                }
+                this.c.fillStyle = "#fd1501";
+                this.c.fill();
+            this.c.closePath();
+
+            this.c.beginPath();
+                this.c.moveTo(this.activeInner[7][4], this.activeInner[7][5]);
+                for (let pt of this.activeInner) {
+                    this.c.bezierCurveTo(...pt);
+                }
+                this.c.fillStyle = "#000000";
+                this.c.fill();
+            this.c.closePath();
+
+            for (let i=0; i<this.diffOuter.length; i++) {
+                for (let j=0; j<this.diffOuter[i].length; j++) {
+                    this.activeOuter[i][j] += this.animationDirection * this.diffOuter[i][j];
+                    this.activeInner[i][j] += this.animationDirection * this.diffInner[i][j];
+                }
+            }
+
+            this.frameCount++;
+            if (this.frameCount >= this.framesLimit) {
+                this.animationDirection *= -1;
+                this.frameCount = 0;
+            }
+        }
+    }
+
+    he = new HypnoEye(ctx, 0, 0, .5);
+    const plusOuter = [[165,0,165,40,120,60],[90,75,25,60,20,115],[20,155,65,155,110,175],[150,190,130,230,195,235],[235,235,240,195,270,180],[305,155,350,165,350,115],[350,75,310,80,260,55],[225,35,240,10,200,5]];
+    const minusOuter = [[129,62,124,60,88,62],[59,67,11,68,3,112],[1,159,65,155,110,175],[142,188,146,190,195,189],[229,186,237,172,267,165],[305,155,353,166,361,121],[361,76,310,80,243,57],[209,45,187,51,153,58]];
+
+    const minusInner = [[134,78,117,70,87,71],[62,71,29,83,22,111],[22,157,65,155,112,162],[149,167,156,176,196,178],[219,178,231,171,267,155],[309,137,363,153,349,112],[332,77,280,102,236,79],[198,60,187,51,155,71]];
+    const plusInner = [[168,15,167,73,127,76],[90,75,49,67,43,118],[45,157,78,145,118,156],[156,172,131,206,196,220],[227,220,221,172,260,166],[285,159,319,165,331,121],[336,76,310,80,252,60],[216,47,231,12,202,13]];
+
+    var diffOuter = [];
+    var diffInner = [];
+
+    for (let i=0; i<plusOuter.length; i++) {
+        let dOut = [],
+            dIn = [];
+        for (let j=0; j<plusOuter[i].length; j++) {
+            dOut.push((minusOuter[i][j] - plusOuter[i][j]) / framesLimit);
+            dIn.push((minusInner[i][j] - plusInner[i][j]) / framesLimit);
+        }
+
+        diffOuter.push(dOut);
+        diffInner.push(dIn);
+    }
+
+    var activeOuter = structuredClone(plusOuter);
+    var activeInner = structuredClone(plusInner);
+    var frameCount = 0;
+    var dir = 1;
+
+    function update() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        he.draw();
+        // ctx.beginPath();
+        //     ctx.moveTo(activeOuter[7][4], activeOuter[7][5]);
+        //     for (let pt of activeOuter) {
+        //         ctx.bezierCurveTo(...pt);
+        //     }
+        //     ctx.fillStyle = "#fd1501";
+        //     ctx.fill();
+        // ctx.closePath();
+
+        // ctx.beginPath();
+        //     ctx.moveTo(activeInner[7][4], activeInner[7][5]);
+        //     for (let pt of activeInner) {
+        //         ctx.bezierCurveTo(...pt);
+        //     }
+        //     ctx.fillStyle = "#000000";
+        //     ctx.fill();
+        // ctx.closePath();
+
+        // for (let i=0; i<diffOuter.length; i++) {
+        //     for (let j=0; j<diffOuter[i].length; j++) {
+        //         activeOuter[i][j] += dir * diffOuter[i][j];
+        //         activeInner[i][j] += dir * diffInner[i][j];
+        //     }
+        // }
+
+        // frameCount++;
+        // if (frameCount >= framesLimit) {
+        //     dir *= -1;
+        //     frameCount = 0;
+        // }
+    }
+    
+    update();
+
+    setInterval(update, 1000/FPS)
+</script>
