@@ -54,7 +54,7 @@ class SoundButton {
 
         this.c.beginPath();
             this.c.drawImage(
-                this.state ? this.soundOff : this.soundOn,
+                this.state ? this.soundOn : this.soundOff,
                 this.x, this.y
             );
         this.c.closePath();
